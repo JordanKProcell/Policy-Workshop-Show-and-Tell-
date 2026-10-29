@@ -1,0 +1,166 @@
+---
+title: "Policy Agenda Project"
+author: "Jordan Procell"
+format: html
+---
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+# 1. Download and read the dataset
+dataset_url <- "https://minio.la.utexas.edu/compagendas/datasetfiles/US-Public-Gallups_Most_Important_Problem-21.3.csv"
+US_opinion <- read.csv(dataset_url)
+
+# 2. Clean and filter the data, saving it into the 'compared_topics' object
+compared_topics <- US_opinion %>% 
+  filter(majortopic %in% c(1, 16)) %>%
+  filter(!is.na(percent))
+
+# 3. Create the ggplot using the newly created dataset name
+ggplot(compared_topics, aes(x = year, y = percent, color = as.factor(majortopic))) +
+  geom_line(linewidth = 1) +
+  scale_color_discrete(
+    labels = c("1" = "Macroeconomics", "16" = "Defense")
+  ) +
+  labs(
+    title = "US Public Interest: Macroeconomics & Civil Rights",
+    x = "Year",
+    y = "Percent",
+    color = "Topic"
+  ) +
+  theme_classic()
+```
+```{r}
+library(ggplot2)
+library(dplyr)
+
+# 1. Download and read the dataset
+dataset_url <- "https://minio.la.utexas.edu/compagendas/datasetfiles/uk_mip_csv.csv"
+UK_opinion <- read.csv(dataset_url)
+
+# 2. Clean and filter the data, saving it into the 'compared_topics' object
+compared_topics <- UK_opinion %>% 
+  filter(majortopic %in% c(1, 16)) %>%
+  filter(!is.na(percent))
+
+# 3. Create the ggplot using the newly created dataset name
+ggplot(compared_topics, aes(x = year, y = percent, color = as.factor(majortopic))) +
+  geom_line(linewidth = 1) +
+  scale_color_discrete(
+    labels = c("1" = "Macroeconomics", "16" = "Defense")
+  ) +
+  labs(
+    title = "UK Public Interest: Macroeconomics & Defense",
+    x = "Year",
+    y = "Percent",
+    color = "Topic"
+  ) +
+  theme_classic()
+```
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(scales)
+
+# 1. Directly read your exact data structure safely without any network download issues
+raw_text <- "id,year,percent,majortopic,Congress
+1,1946,,1,79
+2,1947,0.347958,1,80
+3,1948,0.221154,1,80
+4,1949,0.288126,1,81
+5,1950,0.233645,1,81
+506,1947,0.00302572,8,80
+533,1974,0.100870,8,93
+538,1979,0.200403,8,96
+1010,1947,0.114977,16,80
+1029,1966,0.460043,16,89
+1066,2003,0.219876,16,108
+1226,1947,0.227685,19,80
+1240,1961,0.432272,19,87
+1296,2017,0.080921,19,115
+1530,2018,0.123755,19,115
+1541,2019,0.020493,8,116
+1542,2019,0.028239,9,116
+1548,2019,0.066346,16,116
+1551,2019,0.152802,19,116
+1557,2020,0.254421,3,116
+1562,2020,0.000428,8,116
+1569,2020,0.013119,16,116
+1572,2020,0.024574,19,116
+1583,2021,0.038666,8,117
+1590,2021,0.082395,16,117
+1593,2021,0.139873,19,117
+1604,2022,0.040260,8,117
+1611,2022,0.016258,16,117
+1614,2022,0.040158,19,117
+1624,2023,0.212249,7,118
+1625,2023,0.009074,8,118
+1632,2023,0.008488,16,118
+1635,2023,0.014922,19,118"
+
+US_opinion <- read.csv(textConnection(raw_text), stringsAsFactors = FALSE)
+
+# 2. Filter data for the requested topics: Energy (8), Defense (16), and Foreign Policy (19)
+compared_topics <- US_opinion %>%
+  filter(majortopic %in% c(8, 16, 19)) %>%
+  filter(!is.na(percent)) %>%
+  mutate(topic_label = case_when(
+    majortopic == 8  ~ "Energy Policy",
+    majortopic == 16 ~ "Defense & Military",
+    majortopic == 19 ~ "Foreign Policy / Int'l Affairs"
+  ))
+
+# 3. Dynamic Calculation: Isolate the absolute maximum priority level row for each year
+yearly_peaks <- compared_topics %>%
+  group_by(year) %>%
+  filter(percent == max(percent, na.rm = TRUE)) %>%
+  ungroup()
+
+# 4. Generate the visualization with custom styling and red stars at the heights
+ggplot(compared_topics, aes(x = year, y = percent)) +
+  # Transparent filled areas to view structural issue weight overlaps cleanly
+  geom_area(aes(fill = topic_label), position = "identity", alpha = 0.25) +
+  geom_line(aes(color = topic_label), linewidth = 1.2) +
+  
+  # The Requested Feature: Red stars (shape 11) matching each year's maximum priority height
+  geom_point(data = yearly_peaks, aes(x = year, y = percent), 
+             shape = 11, color = "#FF0000", size = 4, stroke = 1.2) +
+  
+  # Custom aesthetic configurations & distinct thematic color palette
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  scale_color_manual(values = c(
+    "Energy Policy" = "#E69F00",                  # Gold
+    "Defense & Military" = "#009E73",             # Sage Green
+    "Foreign Policy / Int'l Affairs" = "#0072B2"  # Blue
+  )) +
+  scale_fill_manual(values = c(
+    "Energy Policy" = "#E69F00",
+    "Defense & Military" = "#009E73",
+    "Foreign Policy / Int'l Affairs" = "#0072B2"
+  )) +
+  
+  # Typography adjustments
+  labs(
+    title = "US Priorities: Foreign Policy, Defense, and Energy",
+    subtitle = "Red stars indicate the highest priority point among the three categories for each calendar year",
+    x = "Year",
+    y = "Percentage of Public Mentions",
+    color = "Agenda Issue",
+    fill = "Agenda Issue"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 10, color = "gray40"),
+    legend.position = "bottom",
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_line(color = "gray92")
+  )
+
+```
+    
+
+      
